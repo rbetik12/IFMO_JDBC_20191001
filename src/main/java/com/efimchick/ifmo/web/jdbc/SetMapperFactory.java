@@ -23,9 +23,7 @@ public class SetMapperFactory {
                     while (resultSet.next()) {
                         employees.add(getEmployee(resultSet));
                     }
-                } catch (SQLException ignored) {
-
-                }
+                } catch (SQLException ignored) {}
                 return employees;
             }
         };
