@@ -17,10 +17,6 @@ import java.util.*;
 
 public class ServiceFactory {
 
-    private Map<BigInteger, Department> departments = getDepartments();
-    private List<Employee> employees = getEmployees();
-    private List<Employee> employeesWithManagerChain = getEmployeesWithManagerChain();
-
     private ResultSet getResultSet(String query) {
         try {
             Connection con = ConnectionSource.instance().createConnection();
@@ -80,7 +76,7 @@ public class ServiceFactory {
                 LocalDate.parse(resultSet.getString("hiredate")),
                 new BigDecimal(resultSet.getString("salary")),
                 manager,
-                resultSet.getString("department") == null ? null : departments.get(new BigInteger(resultSet.getString("department"))));
+                resultSet.getString("department") == null ? null : getDepartment(resultSet.getString("department")));
     }
 
     private Employee getManager(ResultSet resultSet, BigInteger managerID) {
@@ -102,24 +98,21 @@ public class ServiceFactory {
         }
     }
 
-    private Map<BigInteger, Department> getDepartments() {
-        Map<BigInteger, Department> departmentsMap = new HashMap<>();
+    private Department getDepartment(String id) {
+        if (id == null) return null;
         try {
-            ResultSet rs = getResultSet("select * from department");
-            while (rs.next()) {
-                departmentsMap.put(
+            ResultSet rs = getResultSet("select * from department where id=" + id);
+            if (rs.next())
+                return new Department(
                         new BigInteger(rs.getString("id")),
-                        new Department(
-                                new BigInteger(rs.getString("id")),
-                                rs.getString("name"),
-                                rs.getString("location")
-                        )
+                        rs.getString("name"),
+                        rs.getString("location")
                 );
-            }
+            else
+                return null;
         } catch (SQLException e) {
-            System.out.println(e.getErrorCode());
+            return null;
         }
-        return departmentsMap;
     }
 
     private Employee getEmployeeWithManagerChain(ResultSet resultSet) {
@@ -163,6 +156,7 @@ public class ServiceFactory {
         return new EmployeeService() {
             @Override
             public List<Employee> getAllSortByHireDate(Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> sortedEmployees = new ArrayList<>(employees);
                 Collections.copy(sortedEmployees, employees);
                 sortedEmployees.sort(Comparator.comparing(Employee::getHired));
@@ -171,6 +165,7 @@ public class ServiceFactory {
 
             @Override
             public List<Employee> getAllSortByLastname(Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> sortedEmployees = new ArrayList<>(employees);
                 sortedEmployees.sort(Comparator.comparing(o -> o.getFullName().getLastName()));
                 return getListPage(sortedEmployees, paging);
@@ -178,6 +173,7 @@ public class ServiceFactory {
 
             @Override
             public List<Employee> getAllSortBySalary(Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> sortedEmployees = new ArrayList<>(employees);
                 Collections.copy(sortedEmployees, employees);
                 sortedEmployees.sort(Comparator.comparing(Employee::getSalary));
@@ -186,6 +182,7 @@ public class ServiceFactory {
 
             @Override
             public List<Employee> getAllSortByDepartmentNameAndLastname(Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> sortedEmployees = new ArrayList<>(employees);
                 Collections.copy(sortedEmployees, employees);
                 sortedEmployees.sort(
@@ -209,6 +206,7 @@ public class ServiceFactory {
 
             @Override
             public List<Employee> getByDepartmentSortByHireDate(Department department, Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> depEmployees = new ArrayList<>();
                 for (Employee employee : employees) {
                     if (department.equals(employee.getDepartment()))
@@ -220,6 +218,7 @@ public class ServiceFactory {
 
             @Override
             public List<Employee> getByDepartmentSortBySalary(Department department, Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> depEmployees = new ArrayList<>();
                 for (Employee employee : employees) {
                     if (department.equals(employee.getDepartment())) {
@@ -232,6 +231,7 @@ public class ServiceFactory {
 
             @Override
             public List<Employee> getByDepartmentSortByLastname(Department department, Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> depEmployees = new ArrayList<>();
                 for (Employee employee : employees) {
                     if (department.equals(employee.getDepartment()))
@@ -243,6 +243,7 @@ public class ServiceFactory {
 
             @Override
             public List<Employee> getByManagerSortByLastname(Employee manager, Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> managerEmployees = new ArrayList<>();
                 for (Employee employee : employees) {
                     if (employee.getManager() != null && manager.getId().equals(employee.getManager().getId()))
@@ -254,23 +255,20 @@ public class ServiceFactory {
 
             @Override
             public List<Employee> getByManagerSortByHireDate(Employee manager, Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> managerEmployees = new ArrayList<>();
                 for (Employee employee : employees) {
-//                    if (employee.getManager() != null)
-//                        System.out.println("Employee's manager: " + employee.getManager());
-//                    System.out.println("Manager: " + manager);
                     if (employee.getManager() != null && employee.getManager().getId().equals(manager.getId()))
-//                        System.out.println("LMAOJNFV UEVUIFEKHJB");
                         managerEmployees.add(employee);
 
                 }
                 managerEmployees.sort(Comparator.comparing(Employee::getHired));
-//                System.out.println(managerEmployees);
                 return getListPage(managerEmployees, paging);
             }
 
             @Override
             public List<Employee> getByManagerSortBySalary(Employee manager, Paging paging) {
+                List<Employee> employees = getEmployees();
                 List<Employee> managerEmployees = new ArrayList<>();
                 for (Employee employee : employees) {
                     if (employee.getManager() != null && manager.getId().equals(employee.getManager().getId()))
@@ -282,6 +280,7 @@ public class ServiceFactory {
 
             @Override
             public Employee getWithDepartmentAndFullManagerChain(Employee employee) {
+                List<Employee> employeesWithManagerChain = getEmployeesWithManagerChain();
                 for (Employee employee1 : employeesWithManagerChain) {
                     if (employee1.getId().equals(employee.getId()))
                         return employee1;
@@ -291,6 +290,7 @@ public class ServiceFactory {
 
             @Override
             public Employee getTopNthBySalaryByDepartment(int salaryRank, Department department) {
+                List<Employee> employees = getEmployees();
                 List<Employee> depEmployees = new ArrayList<>();
                 for (Employee employee : employees) {
                     if (department.equals(employee.getDepartment())) {
